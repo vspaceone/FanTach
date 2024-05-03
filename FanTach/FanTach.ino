@@ -1,14 +1,12 @@
-#include "uart.h"
-#include "fan_tach.h"
-
-
-
-const uint8_t INIT_TIMEOUT = 15;  //seconds
-const uint8_t PROBLEM_WAIT_TIME = 60; //sec
-const uint16_t ERROR_RPM = 50; // rpm/10
-const uint16_t OK_RPM = 60; // rpm/10
+const uint8_t INIT_TIMEOUT = 15;       //seconds
+const uint8_t PROBLEM_WAIT_TIME = 60;  //sec
+const uint16_t ERROR_RPM = 50;         // rpm/10
+const uint16_t OK_RPM = 60;            // rpm/10
 
 const uint8_t LED = PB3;
+
+#include "uart.h"
+#include "fan_tach.h"
 
 
 enum byte_meanings_e {
@@ -51,12 +49,6 @@ void send_state() {
   UART_tx(EOM);
 }
 
-bool fans_below() {
-  for (uint8_t i = 0; i < 4; i++)
-    if (fan_rpm[i] < ERROR_RPM) return true;
-  return false;
-}
-
 uint32_t problem_begin_ms = 0;
 void loop() {
   switch (machine_state) {
@@ -82,6 +74,13 @@ void loop() {
         if (!fans_below()) machine_state = OK;
       }
       break;
+  }
+
+
+  static uint32_t last_fan_calc_ms = 0;
+  uint32_t fan_calc_delta = millis() - last_fan_calc_ms;
+  if (fan_calc_delta > 5000) {
+    calc_fan_speed(fan_calc_delta);
   }
 
   static uint32_t last_state_ms = 0;
