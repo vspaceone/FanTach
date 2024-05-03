@@ -7,6 +7,7 @@ const uint8_t LED = PB3;
 
 #include "uart.h"
 #include "fan_tach.h"
+//#include "fan_pwm.h"
 
 
 enum byte_meanings_e {
@@ -36,7 +37,8 @@ void setup() {
 
   pinMode(LED, OUTPUT);
 
-
+  setup_fan_tach();
+  //setup_fan_pwm();
   UART_tx(EOM);
 }
 
