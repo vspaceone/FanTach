@@ -4,9 +4,9 @@
 
 
 const uint8_t INIT_TIMEOUT = 15;  //seconds
-const uint8_t PROBLEM_WAIT_TIME = 60;
-const uint16_t ERROR_RPM = 500;
-const uint16_t OK_RPM = 600;
+const uint8_t PROBLEM_WAIT_TIME = 60; //sec
+const uint16_t ERROR_RPM = 50; // rpm/10
+const uint16_t OK_RPM = 60; // rpm/10
 
 const uint8_t LED = PB3;
 
@@ -74,7 +74,7 @@ void loop() {
     case PROBLEM:
       {
         if (!fans_below()) machine_state = OK;
-        if (millis() - problem_begin_ms > PROBLEM_WAIT_TIME * 1000)
+        if (millis() - problem_begin_ms > (uint32_t)PROBLEM_WAIT_TIME * 1000) machine_state = ERROR;
       }
       break;
     case ERROR:
