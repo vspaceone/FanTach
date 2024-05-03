@@ -8,7 +8,7 @@ const uint16_t OK_RPM = 60;            // rpm/10
 const uint8_t LED = PB3;
 
 #include "fan_tach.h"
-//#include "fan_pwm.h"
+#include "fan_pwm.h"
 
 
 enum byte_meanings_e {
@@ -39,7 +39,7 @@ void setup() {
   pinMode(LED, OUTPUT);
 
   setup_fan_tach();
-  //setup_fan_pwm();
+  setup_fan_pwm();
   softSerialWrite(EOM);
 }
 
@@ -90,5 +90,8 @@ void loop() {
   if (millis() - last_state_ms > 1000) {
     send_state();
     last_state_ms = millis();
+  }
+  if (softSerialAvailable()) {
+    send_state();
   }
 }

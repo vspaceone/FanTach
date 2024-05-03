@@ -47,3 +47,10 @@ ISR(PCINT0_vect) {
   check_fan_input(2, PA2);
   check_fan_input(3, PA3);
 }
+
+void setup_fan_tach() {
+  GIMSK |= 1 << PCIE0;  //enable PCINT0
+
+  //        PA7......PA0
+  PCMSK0 |= 0b00001111;  //enable PCINT0 for pins PA0 to PA3
+}
