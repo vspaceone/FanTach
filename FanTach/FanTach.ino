@@ -71,7 +71,7 @@ void send_state() {
     //current PWM
     softSerialWrite(FAN_PWM);
     softSerialWrite(i);
-    softSerialWrite(fan_pwm[i]);
+    softSerialWrite(fan_pwm_pct[i]);
     softSerialWrite(EOM);
   }
 }
