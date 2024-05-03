@@ -59,10 +59,51 @@ More notes:
 // Globals
 //
 
-uint16_t _rx_delay_centering = 0;
-uint16_t _rx_delay_intrabit = 0;
-uint16_t _rx_delay_stopbit = 0;
-uint16_t _tx_delay = 0;
+
+//[H3] hardcoded baudrate=1200bps to save space
+
+#if F_CPU == 1000000
+/*	//  baud    rxcenter    rxintra    rxstop  tx
+	{ 4800,     14,        28,       27,    27,    },
+	{ 2400,     28,        56,       56,    56,    },
+	{ 1200,     56,        118,      118,   118,   },
+	{ 300,      224,       475,      475,   475,   },*/
+
+uint16_t _rx_delay_centering = 56;
+uint16_t _rx_delay_intrabit = 118;
+uint16_t _rx_delay_stopbit = 118;
+uint16_t _tx_delay = 118;
+const int XMIT_START_ADJUSTMENT = 3;
+
+#elif F_CPU == 8000000
+/*	//  baud    rxcenter    rxintra    rxstop  tx
+	{ 4800,     110,        233,       233,    230,    },
+	{ 1200,     467,        948,       948,    945,    },
+	{ 2400,     229,        472,       472,    469,    },
+	{ 300,      1895,       3805,      3805,   3802,   },*/
+
+uint16_t _rx_delay_centering = 229;
+uint16_t _rx_delay_intrabit = 472;
+uint16_t _rx_delay_stopbit = 472;
+uint16_t _tx_delay = 469;
+const int XMIT_START_ADJUSTMENT = 4;
+
+#elif F_CPU == 16000000
+static const DELAY_TABLE PROGMEM table[] =
+/*	//  baud    rxcenter   rxintra    rxstop    tx
+	{ 4800,     233,       474,       474,      471,   },
+	{ 2400,     471,       950,       950,      947,   },
+	{ 1200,     947,       1902,      1902,     1899,  },
+	{ 300,      3804,      7617,      7617,     7614,  }, */
+
+uint16_t _rx_delay_centering = 947;
+uint16_t _rx_delay_intrabit = 1902;
+uint16_t _rx_delay_stopbit = 1902;
+uint16_t _tx_delay = 1899;
+const int XMIT_START_ADJUSTMENT = 5;
+#else
+#error Use 8MHz, 4MHz, or 1MHz clock
+#endif
 
 uint16_t _buffer_overflow = false;
 
@@ -78,76 +119,6 @@ static volatile uint8_t _receive_buffer_head;
 // private static method for timing
 static inline void tunedDelay(uint16_t delay);
 
-//
-// Lookup table
-//
-typedef struct _DELAY_TABLE {
-	long baud;
-	unsigned short rx_delay_centering;
-	unsigned short rx_delay_intrabit;
-	unsigned short rx_delay_stopbit;
-	unsigned short tx_delay;
-} DELAY_TABLE;
-
-#if F_CPU == 1000000
-
-// At 1Mhz anything over 4800 is so error ridden it will not work
-static const DELAY_TABLE table[] PROGMEM =
-{
-	//  baud    rxcenter    rxintra    rxstop  tx
-	{ 4800,     14,        28,       27,    27,    },
-	{ 2400,     28,        56,       56,    56,    },
-	{ 1200,     56,        118,      118,   118,   },
-	{ 300,      224,       475,      475,   475,   },
-};
-
-const int XMIT_START_ADJUSTMENT = 3;
-
-#elif F_CPU == 8000000
-
-static const DELAY_TABLE table[] PROGMEM =
-{
-	//  baud    rxcenter    rxintra    rxstop  tx
-	{ 115200,   1,          5,         5,      3,      },
-	{ 57600,    1,          15,        15,     13,     },
-	{ 38400,    2,          25,        26,     23,     },
-	{ 31250,    7,          32,        33,     29,     },
-	{ 28800,    11,         35,        35,     32,     },
-	{ 19200,    20,         55,        55,     52,     },
-	{ 14400,    30,         75,        75,     72,     },
-	{ 9600,     50,         114,       114,    112,    },
-	{ 4800,     110,        233,       233,    230,    },
-	{ 2400,     229,        472,       472,    469,    },
-	{ 1200,     467,        948,       948,    945,    },
-	{ 600,      948,        1895,      1895,   1890,   },
-	{ 300,      1895,       3805,      3805,   3802,   },
-};
-
-const int XMIT_START_ADJUSTMENT = 4;
-
-#elif F_CPU == 16000000
-
-static const DELAY_TABLE PROGMEM table[] =
-{
-	//  baud    rxcenter   rxintra    rxstop    tx
-	{ 115200,   1,         17,        17,       12,    }, // 117647 off by 2.12%, causes problems
-	{ 57600,    10,        37,        37,       33,    }, // 57971 off by 0.644%, causes problems
-	{ 38400,    25,        57,        57,       54,    },
-	{ 31250,    31,        70,        70,       68,    },
-	{ 28800,    34,        77,        77,       74,    },
-	{ 19200,    54,        117,       117,      114,   },
-	{ 14400,    74,        156,       156,      153,   },
-	{ 9600,     114,       236,       236,      233,   },
-	{ 4800,     233,       474,       474,      471,   },
-	{ 2400,     471,       950,       950,      947,   },
-	{ 1200,     947,       1902,      1902,     1899,  },
-	{ 600,      1902,      3804,      3804,     3800,  },
-	{ 300,      3804,      7617,      7617,     7614,  },
-};
-
-const int XMIT_START_ADJUSTMENT = 5;
-
-#endif
 
 //
 // Private methods
@@ -171,7 +142,7 @@ inline void tunedDelay(uint16_t delay) {
 //
 // Interrupt handling, receive routine
 //
-ISR(PCINT0_vect) {
+ISR(PCINT1_vect) {
 	uint8_t d = 0;
 
 	// If RX line is high, then we don't see any start bit
@@ -211,37 +182,26 @@ ISR(PCINT0_vect) {
 // Public methods
 //
 
-void softSerialBegin(long speed) {
-	unsigned i;
-
+void softSerialBegin() {
 	_receive_buffer_head = _receive_buffer_tail = 0;
 	_buffer_overflow = false;
 	SERDDR |= (1<<TXPIN); // set TX for output
 	SERDDR &= ~(1<<RXPIN); // set RX for input
 	SERPORT |= (1<<TXPIN)|(1<<RXPIN); // assumes no inverse logic
 
-	for (i = 0; i < sizeof(table) / sizeof(table[0]); ++i) {
-		long baud = pgm_read_dword(&table[i].baud);
-		if (baud == speed) {
-			_rx_delay_centering = pgm_read_word(&table[i].rx_delay_centering);
-			_rx_delay_intrabit = pgm_read_word(&table[i].rx_delay_intrabit);
-			_rx_delay_stopbit = pgm_read_word(&table[i].rx_delay_stopbit);
-			_tx_delay = pgm_read_word(&table[i].tx_delay);
-			// Set up RX interrupts, but only if we have a valid RX baud rate
-			GIMSK |= (1<<PCIE);
-			PCMSK |= (1<<RXPIN);
-			tunedDelay(_tx_delay);
-			sei();
-			return;
-		}
-	}
+	// Set up RX interrupts, but only if we have a valid RX baud rate
+	GIMSK |= (1<<PCIE1);
+	PCMSK1 |= (1<<RXPIN);
+	tunedDelay(_tx_delay);
+	sei();
+	return;
 
 	// No valid rate found
 	// Indicate an error
 }
 
 void softSerialEnd() {
-	PCMSK = 0;
+	PCMSK1 = 0;
 }
 
 // Read data from buffer

@@ -1,3 +1,5 @@
+#include "uart/SoftwareSerial.h"
+
 const uint8_t INIT_TIMEOUT = 15;       //seconds
 const uint8_t PROBLEM_WAIT_TIME = 60;  //sec
 const uint16_t ERROR_RPM = 50;         // rpm/10
@@ -5,7 +7,6 @@ const uint16_t OK_RPM = 60;            // rpm/10
 
 const uint8_t LED = PB3;
 
-#include "uart.h"
 #include "fan_tach.h"
 //#include "fan_pwm.h"
 
@@ -26,8 +27,8 @@ enum states_e {
 };
 
 void setup() {
-  UART_init();
-  UART_tx(BOOT);
+  softSerialBegin();
+  softSerialWrite(BOOT);
 
   pinMode(PA0, INPUT_PULLUP);
   pinMode(PA1, INPUT_PULLUP);
@@ -39,16 +40,16 @@ void setup() {
 
   setup_fan_tach();
   //setup_fan_pwm();
-  UART_tx(EOM);
+  softSerialWrite(EOM);
 }
 
 uint8_t machine_state = INIT;
 
 void send_state() {
   //State
-  UART_tx(STATE);
-  UART_tx(machine_state);
-  UART_tx(EOM);
+  softSerialWrite(STATE);
+  softSerialWrite(machine_state);
+  softSerialWrite(EOM);
 }
 
 uint32_t problem_begin_ms = 0;

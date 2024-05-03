@@ -48,14 +48,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 //
 // Hardcoded TX/RX Registers
-//
-//   For ATtiny85 you MUST use I/O port B.
-//
 #define SERDDR	DDRB
 #define SERPORT	PORTB
 #define SERPIN	PINB
-#define RXPIN	PB3
-#define TXPIN	PB4
+#define RXPIN	PB1
+#define TXPIN	PB0
 
 //
 // Types
@@ -66,7 +63,7 @@ typedef uint8_t byte;
 //
 // Definitions
 //
-#define _SS_MAX_RX_BUFF 64 // RX buffer size, must be (1<<n)
+#define _SS_MAX_RX_BUFF 8 // RX buffer size, must be (1<<n)
 #define _SS_RX_BUFF_MASK (_SS_MAX_RX_BUFF-1)
 #ifndef GCC_VERSION
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
@@ -75,7 +72,7 @@ typedef uint8_t byte;
 //
 // public methods
 //
-void softSerialBegin(long speed);
+void softSerialBegin();
 void softSerialEnd();
 bool softSerialOverflow();
 int softSerialPeek();
@@ -83,5 +80,7 @@ size_t softSerialWrite(uint8_t byte);
 int softSerialRead();
 int softSerialAvailable();
 void softSerialFlush();
+
+#include "SoftwareSerial.c"
 
 #endif
