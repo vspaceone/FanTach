@@ -98,7 +98,7 @@ void run_state_machine() {
         if (!fans_below()) machine_state = OK;
         if (millis() - problem_begin_ms > (uint32_t)PROBLEM_WAIT_TIME * 1000) machine_state = ERROR;
 
-        digitalWrite(LED, HIGH);  //digitalWrite(LED, (millis() >> 10) & 1);  //blink 512ms
+        digitalWrite(PS_ON, HIGH);
         digitalWrite(PS_ON, LOW);
       }
       break;
@@ -107,7 +107,7 @@ void run_state_machine() {
         if (!fans_below()) machine_state = OK;
 
         digitalWrite(LED, LOW);
-        digitalWrite(PS_ON, HIGH);
+        digitalWrite(LED, (millis() >> 10) & 1);  //blink 512ms
       }
       break;
   }
@@ -119,8 +119,8 @@ void loop() {
   if (fan_calc_delta > 5000) {
     last_fan_calc_ms += fan_calc_delta;
     calc_fan_speed(fan_calc_delta);
-    run_state_machine();
     send_state();
   }
+  run_state_machine();
   yield();
 }
