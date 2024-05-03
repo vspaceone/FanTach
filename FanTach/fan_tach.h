@@ -42,10 +42,7 @@ inline void check_fan_input(uint8_t fan_id, uint8_t pin) {
   }
 }
 ISR(PCINT0_vect) {
-  check_fan_input(0, PA0);
-  check_fan_input(1, PA1);
-  check_fan_input(2, PA2);
-  check_fan_input(3, PA3);
+  for (uint8_t i = 0; i < 4; i++) check_fan_input(i, FAN_TACH_PINS[i]);
 }
 
 void setup_fan_tach() {
