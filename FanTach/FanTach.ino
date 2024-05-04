@@ -24,18 +24,13 @@ const uint8_t PS_ON = PA4;
 const uint8_t DET_FANS = 8 + PB1;
 //PB0 is UART TX
 
-#include "fan_tach.h"
-
-#ifdef DO_PWM
-#include "fan_pwm.h"
-#endif
-
 enum byte_meanings_e {
   EOM = 0,       //end of messange
   BOOT = 1,      //void
   STATE = 2,     //uint8_t state
   FAN_TACH = 3,  //uint8_t fan ID | uint16_t RPM
-  FAN_PWM = 4    //uint8_t fan ID | uint8_t PWM
+  FAN_PWM = 4,   //uint8_t fan ID | uint8_t PWM
+  FAN_MON = 5    //byte monitored_fans
 };
 
 enum states_e {
@@ -44,6 +39,12 @@ enum states_e {
   PROBLEM = 2,
   ERROR = 3
 };
+
+#include "fan_tach.h"
+
+#ifdef DO_PWM
+#include "fan_pwm.h"
+#endif
 
 void setup() {
   wdt_enable(WDTO_1S);
@@ -108,6 +109,7 @@ void run_state_machine() {
     case INIT:
       if (millis() > INIT_TIMEOUT * 1000) {
         machine_state = OK;
+
         if (!digitalRead(DET_FANS)) detect_fans();
       }
       break;

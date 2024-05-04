@@ -32,6 +32,10 @@ bool fans_below() {
 void detect_fans() {
   for (uint8_t i = 0; i < 4; i++) bitWrite(fan_mon_enabled, i, fan_rpm[i] > ERROR_RPM);
   EEPROM.write(FAN_MON_EN_ADDR, fan_mon_enabled);
+
+  softSerialWrite(FAN_MON);
+  softSerialWrite(fan_mon_enabled);
+  softSerialWrite(EOM);
 }
 
 //speed meas.
