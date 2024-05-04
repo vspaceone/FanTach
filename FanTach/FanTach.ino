@@ -2,7 +2,7 @@
 #include <avr/wdt.h>
 #include <EEPROM.h>
 
-#include "bitbang_uart_tx.h"
+#include "uart/SoftwareSerial.h"
 
 const uint8_t INIT_TIMEOUT = 15;       //seconds
 const uint8_t PROBLEM_WAIT_TIME = 60;  //sec
@@ -17,8 +17,7 @@ const uint8_t FAN_TACH_PINS[4] = { PA0, PA1, PA2, PA3 };  //dont forget to chang
 const uint8_t FAN_PWM_PINS[4] = { PA5, PA6, PA7, 8 + PB2 };
 const uint8_t LED = 8 + PB3;
 const uint8_t PS_ON = PA4;
-const uint8_t DET_FANS = 8 + PB1;
-//PB0 is UART TX
+//PB0 and PB1 are UART
 
 #include "fan_tach.h"
 #include "fan_pwm.h"
@@ -48,8 +47,8 @@ void setup() {
   pinMode(PS_ON, OUTPUT);
   digitalWrite(PS_ON, HIGH);
 
-  BBUART_init();
-  BBUART_tx(BOOT);
+  softSerialBegin();
+  softSerialWrite(BOOT);
 
   for (uint8_t i = 0; i < 4; i++) {
     pinMode(FAN_TACH_PINS[i], INPUT_PULLUP);
@@ -61,7 +60,7 @@ void setup() {
 
   run_state_machine();  //only runs INIT step
 
-  BBUART_tx(EOM);
+  softSerialWrite(EOM);
   wdt_reset();
 }
 
@@ -69,22 +68,22 @@ uint8_t machine_state = INIT;
 
 void send_state() {
   //State
-  BBUART_tx(STATE);
-  BBUART_tx(machine_state);
-  BBUART_tx(EOM);
+  softSerialWrite(STATE);
+  softSerialWrite(machine_state);
+  softSerialWrite(EOM);
   //Fan Speeds
   for (uint8_t i = 0; i < 4; i++) {
     //RPM
-    BBUART_tx(FAN_TACH);
-    BBUART_tx(i);
-    BBUART_tx(fan_rpm[i] & 0xFF);
-    BBUART_tx((fan_rpm[i] >> 8) & 0xFF);
-    BBUART_tx(EOM);
+    softSerialWrite(FAN_TACH);
+    softSerialWrite(i);
+    softSerialWrite(fan_rpm[i] & 0xFF);
+    softSerialWrite((fan_rpm[i] >> 8) & 0xFF);
+    softSerialWrite(EOM);
     //current PWM
-    BBUART_tx(FAN_PWM);
-    BBUART_tx(i);
-    BBUART_tx(fan_pwm_pct[i]);
-    BBUART_tx(EOM);
+    softSerialWrite(FAN_PWM);
+    softSerialWrite(i);
+    softSerialWrite(fan_pwm_pct[i]);
+    softSerialWrite(EOM);
   }
 }
 
