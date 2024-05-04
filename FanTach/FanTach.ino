@@ -8,9 +8,13 @@ const uint8_t PROBLEM_WAIT_TIME = 60;  //sec
 const uint16_t ERROR_RPM = 50;         // rpm/10
 const uint16_t OK_RPM = 60;            // rpm/10
 
+
+#ifdef PINMAPPING_CCW
+#error "Sketch was written for clockwise pin mapping!"
+#endif
 const uint8_t FAN_TACH_PINS[4] = { PA0, PA1, PA2, PA3 };  //dont forget to change PCMSK in fan_tach.h
-const uint8_t FAN_PWM_PINS[4] = { PA5, PA6, PA7, PB2 };
-const uint8_t LED = PB3;
+const uint8_t FAN_PWM_PINS[4] = { PA5, PA6, PA7, 8 + PB2 };
+const uint8_t LED = 8 + PB3;
 const uint8_t PS_ON = PA4;
 //PB0 and PB1 are UART
 
@@ -124,5 +128,5 @@ void loop() {
     send_state();
   }
   run_state_machine();
-  delay(10); //give the interrupts some time
+  delay(10);  //give the interrupts some time
 }
