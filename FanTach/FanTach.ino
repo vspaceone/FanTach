@@ -1,3 +1,5 @@
+#include <avr/io.h>
+
 #include "uart/SoftwareSerial.h"
 
 const uint8_t INIT_TIMEOUT = 15;       //seconds
@@ -47,10 +49,9 @@ void setup() {
   setup_fan_tach();
   setup_fan_pwm();
 
-  softSerialWrite(EOM);
-
-
   run_state_machine();  //only runs INIT step
+
+  softSerialWrite(EOM);
 }
 
 uint8_t machine_state = INIT;
@@ -122,5 +123,5 @@ void loop() {
     send_state();
   }
   run_state_machine();
-  yield();
+  delay(10); //give the interrupts some time
 }
