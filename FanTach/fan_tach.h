@@ -1,4 +1,7 @@
-uint8_t TICKS_PER_ROTATION = 4;
+#include <EEPROM.h>
+
+const uint8_t TICKS_PER_ROTATION = 4;
+#define FAN_MON_EN_ADDR 0
 
 uint16_t fan_rpm[4] = { 0, 0, 0, 0 };  //rpm/10
 uint8_t fan_ticks[4] = { 0, 0, 0, 0 };
@@ -26,6 +29,11 @@ bool fans_below() {
   return false;
 }
 
+void detect_fans() {
+  for (uint8_t i = 0; i < 4; i++) bitWrite(fan_mon_enabled, i, fan_rpm[i] > ERROR_RPM);
+  EEPROM.write(FAN_MON_EN_ADDR, fan_mon_enabled);
+}
+
 //speed meas.
 byte last_pin_states = 0x00;
 inline void check_fan_input(uint8_t fan_id, uint8_t pin) {
@@ -39,11 +47,11 @@ ISR(PCINT0_vect) {
 }
 
 void setup_fan_tach() {
-  fan_mon_enabled = EEPROM.read(0);
+  fan_mon_enabled = EEPROM.read(FAN_MON_EN_ADDR);
 
   noInterrupts();
   //        PA7......PA0
   PCMSK0 |= 0b00001111;  //enable PCINT0 for pins PA0 to PA3
-  GIMSK |= 1 << PCIE0;  //enable PCINT0
+  GIMSK |= 1 << PCIE0;   //enable PCINT0
   interrupts();
 }

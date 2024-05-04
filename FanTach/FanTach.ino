@@ -1,6 +1,5 @@
 #include <avr/io.h>
 #include <avr/wdt.h>
-#include <EEPROM.h>
 
 #include "uart/SoftwareSerial.h"
 
@@ -13,15 +12,23 @@ const uint16_t OK_RPM = 60;            // rpm/10
 #ifdef PINMAPPING_CCW
 #error "Sketch was written for clockwise pin mapping!"
 #endif
+
+#undef DO_PWM
+
 const uint8_t FAN_TACH_PINS[4] = { PA0, PA1, PA2, PA3 };  //dont forget to change PCMSK in fan_tach.h
+#ifdef DO_PWM
 const uint8_t FAN_PWM_PINS[4] = { PA5, PA6, PA7, 8 + PB2 };
+#endif
 const uint8_t LED = 8 + PB3;
 const uint8_t PS_ON = PA4;
-//PB0 and PB1 are UART
+const uint8_t DET_FANS = 8 + PB1;
+//PB0 is UART TX
 
 #include "fan_tach.h"
-#include "fan_pwm.h"
 
+#ifdef DO_PWM
+#include "fan_pwm.h"
+#endif
 
 enum byte_meanings_e {
   EOM = 0,       //end of messange
@@ -52,11 +59,17 @@ void setup() {
 
   for (uint8_t i = 0; i < 4; i++) {
     pinMode(FAN_TACH_PINS[i], INPUT_PULLUP);
+#ifdef DO_PWM
     pinMode(FAN_PWM_PINS[i], OUTPUT);
+#endif
   }
 
+  pinMode(DET_FANS, INPUT_PULLUP);
+
   setup_fan_tach();
+#ifdef DO_PWM
   setup_fan_pwm();
+#endif
 
   run_state_machine();  //only runs INIT step
 
@@ -79,11 +92,13 @@ void send_state() {
     softSerialWrite(fan_rpm[i] & 0xFF);
     softSerialWrite((fan_rpm[i] >> 8) & 0xFF);
     softSerialWrite(EOM);
+#ifdef DO_PWM
     //current PWM
     softSerialWrite(FAN_PWM);
     softSerialWrite(i);
     softSerialWrite(fan_pwm_pct[i]);
     softSerialWrite(EOM);
+#endif
   }
 }
 
@@ -91,7 +106,10 @@ uint32_t problem_begin_ms = 0;
 void run_state_machine() {
   switch (machine_state) {
     case INIT:
-      if (millis() > INIT_TIMEOUT * 1000) machine_state = OK;
+      if (millis() > INIT_TIMEOUT * 1000) {
+        machine_state = OK;
+        if (!digitalRead(DET_FANS)) detect_fans();
+      }
       break;
     case OK:
       {
