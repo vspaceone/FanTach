@@ -2,8 +2,7 @@
 #include <avr/wdt.h>
 #include <EEPROM.h>
 
-#include "tss.h"
-#undef USE_SOFTWARE_SERIAL
+#include "uart/SoftwareSerial.h"
 
 const uint8_t INIT_TIMEOUT = 15;       //seconds
 const uint8_t PROBLEM_WAIT_TIME = 60;  //sec
@@ -48,8 +47,8 @@ void setup() {
   pinMode(PS_ON, OUTPUT);
   digitalWrite(PS_ON, HIGH);
 
-  TinySer.begin(1200);
-  TinySer.write(BOOT);
+  softSerialBegin();
+  softSerialWrite(BOOT);
 
   for (uint8_t i = 0; i < 4; i++) {
     pinMode(FAN_TACH_PINS[i], INPUT_PULLUP);
@@ -61,7 +60,7 @@ void setup() {
 
   run_state_machine();  //only runs INIT step
 
-  TinySer.write(EOM);
+  softSerialWrite(EOM);
   wdt_reset();
 }
 
@@ -69,22 +68,22 @@ uint8_t machine_state = INIT;
 
 void send_state() {
   //State
-  TinySer.write(STATE);
-  TinySer.write(machine_state);
-  TinySer.write(EOM);
+  softSerialWrite(STATE);
+  softSerialWrite(machine_state);
+  softSerialWrite(EOM);
   //Fan Speeds
   for (uint8_t i = 0; i < 4; i++) {
     //RPM
-    TinySer.write(FAN_TACH);
-    TinySer.write(i);
-    TinySer.write(fan_rpm[i] & 0xFF);
-    TinySer.write((fan_rpm[i] >> 8) & 0xFF);
-    TinySer.write(EOM);
+    softSerialWrite(FAN_TACH);
+    softSerialWrite(i);
+    softSerialWrite(fan_rpm[i] & 0xFF);
+    softSerialWrite((fan_rpm[i] >> 8) & 0xFF);
+    softSerialWrite(EOM);
     //current PWM
-    TinySer.write(FAN_PWM);
-    TinySer.write(i);
-    TinySer.write(fan_pwm_pct[i]);
-    TinySer.write(EOM);
+    softSerialWrite(FAN_PWM);
+    softSerialWrite(i);
+    softSerialWrite(fan_pwm_pct[i]);
+    softSerialWrite(EOM);
   }
 }
 

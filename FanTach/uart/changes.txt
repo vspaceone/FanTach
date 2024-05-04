@@ -1,0 +1,2 @@
+Due to this library not being able to be configured with #defines outside it's code, i have copied it into this repository.
+It is mostly left as-is. Mainly changes to the used pins and interrupts have been performed to fit the project.
