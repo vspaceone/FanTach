@@ -67,16 +67,7 @@ extern "C"{
           [delaycount] "d" (DelayCount)
         : "r0"
       );
-      /* clear the flag once we have finished receiving the byte. Per datasheet:
-          "the Program Counter is vectored to the actual Interrupt Vector in order to execute the interrupt handling routine, and hardware clears the corresponding Interrupt Flag."
-        This implies that the automatic clearing happens **at the start** of the interrupt. But the interrupt condition (rising edge of ACO) will occur again, likely several times
-        over the course of receiving a byte, so we had damned well better clear this bit manually!
-      */
-      #if !defined(__AVR_ATtinyx8__)
-        ACSR |= (1 << ACI); // SBI - except on x8 where this isn't in low I/O
-      #else
-        ACSR = (1 << ACBG) | (1 << ACIS1) | (1 << ACIS0) | (1 << ACI) | (1 << ACIE); // ldi, out
-      #endif
+
       uint8_t i = (uint8_t)(TSS_rx_buffer.head + 1) & (SERIAL_BUFFER_SIZE-1); //lds, andi
 
       // if we should be storing the received character into the location
@@ -136,33 +127,12 @@ void TSS::begin(long baud) {
   }
   _delayCount = (uint8_t)tempDelay;
   #ifndef SOFT_TX_ONLY
-    //Straight assignment, we need to configure all bits
-    // ACBR connects the 1.1v bandgap reference the positive side of the analog comparator. ACO is high when AINp > AINn.
-    // since AINn is our RX line, not AINp, ACO goes high when the RX line falls below 1.1v (ie, ACO is inverted relative to
-    // the RX input). Hence we want ACIS = 11 to interrupt on the rising edge of ACO so we get the falling edge of RX.
-    ACSR = (1 << ACBG) | (1 << ACIS1) | (1 << ACIS0) | (1 << ACI);
     // These should compile to cbi and sbi - everything is compile time known.
     SOFTSERIAL_DDR    &=  ~(1 << SOFTSERIAL_RXBIT);  // set RX to an input
     SOFTSERIAL_PORT   |=   (1 << SOFTSERIAL_RXBIT);  // enable pullup on RX pin - to prevent accidental interrupt triggers.
-    #if !defined(__AVR_ATtinyx8__) // on most classic tinyies ACSR is in the low IO space, so we can use sbi, cbi instructions.
-      ACSR            |=   (1 <<  ACI);              // clear the flag - above configuration may cause it to be set.
-      ACSR            |=   (1 << ACIE);              // turn on the comparator interrupt
-    #else
-      ACSR = (1 << ACBG) | (1 << ACIS1) | (1 << ACIS0) | (1 << ACI) | (1 << ACIE); // do this with an LDI and OUT on the x8 series.
-    #endif
-    #ifdef ACSRB
-      /* This is only the case on an ATtiny x61, out of the parts that support this builtin Software serial. The 1634 and 828 have it
-       * but they aren't supported because they have hardware serial. The 841 has multiple AC's, which would give the same sort of choices, except
-       * that t has hardware serial ports too. so we don't provide the builtin softSeral.
-       * On the 861, this is located in the low I/O space. We assume ACSRB is is POR state, hence 0, so it's better to use |=, which compiles to SBI instead of = x which compiles to ldi r__, x out ACSRB,x
-       */
-      #if defined(SOFTSERIAL_RXAIN0)
-        ACSRB |= 2; // Use PA6 (AIN0)
-      #elif defined(SOFTSERIAL_RXAIN2)
-        ACSRB |= 1; // Use PA5 (AIN2)
-      #endif
-      // Otherwise we leave it at 0;
-    #endif
+    PCMSK1 |= 1 << SOFTSERIAL_RXBIT;
+    GIMSK |= 1 << PCIE1;  //enable PCINT1
+    
   #endif
   uint8_t oldsreg      =   SREG;    //  These are NOT going to get compiled to cbi/sbi as _txmask is not compile time known.
   cli();                            //  so we need to protect this.
@@ -173,7 +143,7 @@ void TSS::begin(long baud) {
 
 void TSS::end() {
   #ifndef SOFT_TX_ONLY
-    ACSR = (1 << ACD) | (1 << ACI); // turn off the analog comparator, clearing the flag while we're at it.
+    PCMSK1 &= ~(1 << SOFTSERIAL_RXBIT);
     _TSS_rx_buffer->head = _TSS_rx_buffer->tail;
   #endif
   _delayCount = 0;
@@ -214,37 +184,6 @@ int TSS::read(void) {
   #else
     return -1;
   #endif
-}
-bool TSS::listen() {
-  #ifndef SOFT_TX_ONLY
-    if (!_delayCount) {
-      return false;
-    }
-    if (ACSR & (1 << ACD)) {
-      _TSS_rx_buffer->head = 0;
-      _TSS_rx_buffer->tail = 0;
-      ACSR = (1 << ACBG) | (1 << ACIS1) | (1 << ACIS0) | (1 << ACI); // must not have ACIE set while changing ACD
-      #if defined(__AVR_ATtiny_x8__) // not in the low I/O space so use LDI, OUT
-        ACSR = (1 << ACBG) | (1 << ACIS1) | (1 << ACIS0) | (1 << ACI) | (1 << ACIE);
-      #else // we can use sbi. on 88/48 this would result in a 3 instruction IN, ORI, OUT sequence.
-        ACSR |= 1 << ACIE;
-      #endif
-      }
-    return true;
-  #else
-    return false;
-  #endif
-}
-
-// Stop listening. Returns true if we were actually listening.
-bool TSS::stopListening() {
-  #ifndef SOFT_TX_ONLY
-    if (ACSR & (1 << ACD)) {
-      ACSR = (1 << ACD) | (1 << ACBG) | (1 << ACIS1) | (1 << ACIS0) | (1 << ACI);
-      return true;
-    }
-  #endif
-  return false;
 }
 
 size_t TSS::write(uint8_t ch) {
