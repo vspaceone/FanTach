@@ -105,6 +105,8 @@ const int XMIT_START_ADJUSTMENT = 5;
 #error Use 8MHz, 4MHz, or 1MHz clock
 #endif
 
+
+#ifdef SOFTSER_RX_ENABLE
 uint16_t _buffer_overflow = false;
 
 // static data
@@ -115,6 +117,7 @@ static volatile uint8_t _receive_buffer_head;
 
 // private methods
 #define rx_pin_read() (SERPIN & (1<<RXPIN))
+#endif
 
 // private static method for timing
 static inline void tunedDelay(uint16_t delay);
@@ -139,6 +142,7 @@ inline void tunedDelay(uint16_t delay) {
 }
 
 
+#ifdef SOFTSER_RX_ENABLE
 //
 // Interrupt handling, receive routine
 //
@@ -174,7 +178,7 @@ ISR(PCINT1_vect) {
 		}
 	}
 }
-
+#endif
 
 
 
@@ -183,47 +187,26 @@ ISR(PCINT1_vect) {
 //
 
 void softSerialBegin() {
+#ifdef SOFTSER_RX_ENABLE
 	_receive_buffer_head = _receive_buffer_tail = 0;
 	_buffer_overflow = false;
+#endif
 	SERDDR |= (1<<TXPIN); // set TX for output
+#ifdef SOFTSER_RX_ENABLE
 	SERDDR &= ~(1<<RXPIN); // set RX for input
 	SERPORT |= (1<<TXPIN)|(1<<RXPIN); // assumes no inverse logic
+#else
+	SERPORT |= (1<<TXPIN); // assumes no inverse logic
+#endif
 
-	// Set up RX interrupts, but only if we have a valid RX baud rate
+#ifdef SOFTSER_RX_ENABLE
 	GIMSK |= (1<<PCIE1);
 	PCMSK1 |= (1<<RXPIN);
 	tunedDelay(_tx_delay);
 	sei();
+#endif
+	
 	return;
-
-	// No valid rate found
-	// Indicate an error
-}
-
-void softSerialEnd() {
-	PCMSK1 = 0;
-}
-
-// Read data from buffer
-int softSerialRead() {
-	// Empty buffer?
-	if (_receive_buffer_head == _receive_buffer_tail)
-		return -1;
-
-	// Read from "head"
-	uint8_t d = _receive_buffer[_receive_buffer_head]; // grab next byte
-	_receive_buffer_head = (_receive_buffer_head + 1) & _SS_RX_BUFF_MASK; // circular buffer
-	return d;
-}
-
-int softSerialAvailable() {
-	return (_receive_buffer_tail + _SS_MAX_RX_BUFF - _receive_buffer_head) & _SS_RX_BUFF_MASK; // circular buffer
-}
-
-bool softSerialOverflow(void) {
-	bool ret = _buffer_overflow;
-	_buffer_overflow = false;
-	return ret;
 }
 
 size_t softSerialWrite(uint8_t b) {
@@ -257,6 +240,33 @@ size_t softSerialWrite(uint8_t b) {
 	return 1;
 }
 
+#ifdef SOFTSER_RX_ENABLE
+void softSerialEnd() {
+	PCMSK1 = 0;
+}
+
+// Read data from buffer
+int softSerialRead() {
+	// Empty buffer?
+	if (_receive_buffer_head == _receive_buffer_tail)
+		return -1;
+
+	// Read from "head"
+	uint8_t d = _receive_buffer[_receive_buffer_head]; // grab next byte
+	_receive_buffer_head = (_receive_buffer_head + 1) & _SS_RX_BUFF_MASK; // circular buffer
+	return d;
+}
+
+int softSerialAvailable() {
+	return (_receive_buffer_tail + _SS_MAX_RX_BUFF - _receive_buffer_head) & _SS_RX_BUFF_MASK; // circular buffer
+}
+
+bool softSerialOverflow(void) {
+	bool ret = _buffer_overflow;
+	_buffer_overflow = false;
+	return ret;
+}
+
 void softSerialFlush() {
 	uint8_t oldSREG = SREG; // store interrupt flag
 	cli();
@@ -274,3 +284,5 @@ int softSerialPeek() {
 	// Read from "head"
 	return _receive_buffer[_receive_buffer_head];
 }
+#endif
+

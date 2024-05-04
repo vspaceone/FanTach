@@ -51,8 +51,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define SERDDR	DDRB
 #define SERPORT	PORTB
 #define SERPIN	PINB
-#define RXPIN	PB1
 #define TXPIN	PB0
+
+#ifdef SOFTSER_RX_ENABLE
+#define RXPIN	PB1
+#endif
 
 //
 // Types
@@ -73,13 +76,15 @@ typedef uint8_t byte;
 // public methods
 //
 void softSerialBegin();
+size_t softSerialWrite(uint8_t byte);
+#ifdef SOFTSER_RX_ENABLE
 void softSerialEnd();
 bool softSerialOverflow();
 int softSerialPeek();
-size_t softSerialWrite(uint8_t byte);
 int softSerialRead();
 int softSerialAvailable();
 void softSerialFlush();
+#endif
 
 #include "SoftwareSerial.c"
 

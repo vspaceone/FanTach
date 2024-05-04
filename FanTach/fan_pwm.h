@@ -1,4 +1,4 @@
-uint8_t fan_pwm_pct[4] = { 0, 0, 0, 0 };  //0...100
+uint8_t fan_pwm_pct[4] = { 100, 100, 100, 100 }; //0...100
 
 
 const uint8_t PWM_STEPS = 10;  //enough for controlling PC fans

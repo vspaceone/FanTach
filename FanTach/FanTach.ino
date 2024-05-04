@@ -1,8 +1,6 @@
 #include <avr/io.h>
 #include <avr/wdt.h>
 
-#include "uart/SoftwareSerial.h"
-
 const uint8_t INIT_TIMEOUT = 15;       //seconds
 const uint8_t PROBLEM_WAIT_TIME = 60;  //sec
 const uint16_t ERROR_RPM = 50;         // rpm/10
@@ -13,7 +11,8 @@ const uint16_t OK_RPM = 60;            // rpm/10
 #error "Sketch was written for clockwise pin mapping!"
 #endif
 
-#undef DO_PWM
+#define DO_PWM
+//#define SER_PWM //control PWM via serial (uses way more flash)
 
 const uint8_t FAN_TACH_PINS[4] = { PA0, PA1, PA2, PA3 };  //dont forget to change PCMSK in fan_tach.h
 #ifdef DO_PWM
@@ -40,6 +39,11 @@ enum states_e {
   ERROR = 3
 };
 
+#ifdef SER_PWM
+#define SOFTSER_RX_ENABLE
+#endif
+#include "uart/SoftwareSerial.h"
+
 #include "fan_tach.h"
 
 #ifdef DO_PWM
@@ -54,6 +58,7 @@ void setup() {
   digitalWrite(LED, LOW);
   pinMode(PS_ON, OUTPUT);
   digitalWrite(PS_ON, HIGH);
+  pinMode(DET_FANS, INPUT_PULLUP);
 
   softSerialBegin();
   softSerialWrite(BOOT);
@@ -64,8 +69,6 @@ void setup() {
     pinMode(FAN_PWM_PINS[i], OUTPUT);
 #endif
   }
-
-  pinMode(DET_FANS, INPUT_PULLUP);
 
   setup_fan_tach();
 #ifdef DO_PWM
@@ -94,11 +97,13 @@ void send_state() {
     softSerialWrite((fan_rpm[i] >> 8) & 0xFF);
     softSerialWrite(EOM);
 #ifdef DO_PWM
+#ifdef SER_PWM
     //current PWM
     softSerialWrite(FAN_PWM);
     softSerialWrite(i);
     softSerialWrite(fan_pwm_pct[i]);
     softSerialWrite(EOM);
+#endif
 #endif
   }
 }
