@@ -3,16 +3,7 @@ uint8_t TICKS_PER_ROTATION = 4;
 uint16_t fan_rpm[4] = { 0, 0, 0, 0 };  //rpm/10
 uint8_t fan_ticks[4] = { 0, 0, 0, 0 };
 
-bool get_bit(byte b, byte n) {
-  return b & (1 << n);
-}
-void set_bit(byte b, byte n, byte x) {
-  if (x) b |= (1 << n);
-  else b &= !(1 << n);
-}
-void inv_bit(byte b, byte n) {
-  b ^= (1 << n);
-}
+#define bitFlip(b, n)  b ^= (1 << n)
 
 /*
   dividing ticks by time since last check is quite the crude alg.
@@ -36,8 +27,8 @@ bool fans_below() {
 //speed meas.
 byte last_pin_states = 0x00;
 inline void check_fan_input(uint8_t fan_id, uint8_t pin) {
-  if (get_bit(last_pin_states, fan_id) != digitalRead(pin)) {
-    inv_bit(last_pin_states, fan_id);
+  if (bitRead(last_pin_states, fan_id) != digitalRead(pin)) {
+    bitFlip(last_pin_states, fan_id);
     if (fan_ticks[fan_id] < 0xFF) fan_ticks[fan_id] += 1;
   }
 }
