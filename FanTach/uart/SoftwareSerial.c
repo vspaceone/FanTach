@@ -140,6 +140,45 @@ inline void tunedDelay(uint16_t delay) {
 
 
 //
+// Interrupt handling, receive routine
+//
+ISR(PCINT1_vect) {
+	uint8_t d = 0;
+
+	// If RX line is high, then we don't see any start bit
+	// so interrupt is probably not for us
+	if ( !rx_pin_read() ) {
+		// Wait approximately 1/2 of a bit width to "center" the sample
+		tunedDelay(_rx_delay_centering);
+
+		// Read each of the 8 bits
+		for (uint8_t i = 0x1; i; i <<= 1) {
+			tunedDelay(_rx_delay_intrabit);
+			uint8_t noti = ~i;
+			if (rx_pin_read())
+				d |= i;
+			else // else clause added to ensure function timing is ~balanced
+				d &= noti;
+		}
+
+		// skip the stop bit
+		tunedDelay(_rx_delay_stopbit);
+
+		// if buffer full, set the overflow flag and return
+		if (((_receive_buffer_tail + 1) & _SS_RX_BUFF_MASK) != _receive_buffer_head) {  // circular buffer
+			// save new data in buffer: tail points to where byte goes
+			_receive_buffer[_receive_buffer_tail] = d; // save new byte
+			_receive_buffer_tail = (_receive_buffer_tail + 1) & _SS_RX_BUFF_MASK;  // circular buffer
+		} else {
+			_buffer_overflow = true;
+		}
+	}
+}
+
+
+
+
+//
 // Public methods
 //
 
@@ -147,14 +186,44 @@ void softSerialBegin() {
 	_receive_buffer_head = _receive_buffer_tail = 0;
 	_buffer_overflow = false;
 	SERDDR |= (1<<TXPIN); // set TX for output
-	SERPORT |= (1<<TXPIN); // assumes no inverse logic
-	
+	SERDDR &= ~(1<<RXPIN); // set RX for input
+	SERPORT |= (1<<TXPIN)|(1<<RXPIN); // assumes no inverse logic
+
+	// Set up RX interrupts, but only if we have a valid RX baud rate
+	GIMSK |= (1<<PCIE1);
+	PCMSK1 |= (1<<RXPIN);
 	tunedDelay(_tx_delay);
 	sei();
 	return;
 
 	// No valid rate found
 	// Indicate an error
+}
+
+void softSerialEnd() {
+	PCMSK1 = 0;
+}
+
+// Read data from buffer
+int softSerialRead() {
+	// Empty buffer?
+	if (_receive_buffer_head == _receive_buffer_tail)
+		return -1;
+
+	// Read from "head"
+	uint8_t d = _receive_buffer[_receive_buffer_head]; // grab next byte
+	_receive_buffer_head = (_receive_buffer_head + 1) & _SS_RX_BUFF_MASK; // circular buffer
+	return d;
+}
+
+int softSerialAvailable() {
+	return (_receive_buffer_tail + _SS_MAX_RX_BUFF - _receive_buffer_head) & _SS_RX_BUFF_MASK; // circular buffer
+}
+
+bool softSerialOverflow(void) {
+	bool ret = _buffer_overflow;
+	_buffer_overflow = false;
+	return ret;
 }
 
 size_t softSerialWrite(uint8_t b) {
@@ -186,4 +255,22 @@ size_t softSerialWrite(uint8_t b) {
 	tunedDelay(_tx_delay);
 
 	return 1;
+}
+
+void softSerialFlush() {
+	uint8_t oldSREG = SREG; // store interrupt flag
+	cli();
+	_receive_buffer_head = _receive_buffer_tail = 0;
+	SREG = oldSREG; // restore interrupt flag
+	//sei();
+}
+
+
+int softSerialPeek() {
+	// Empty buffer?
+	if (_receive_buffer_head == _receive_buffer_tail)
+		return -1;
+
+	// Read from "head"
+	return _receive_buffer[_receive_buffer_head];
 }
