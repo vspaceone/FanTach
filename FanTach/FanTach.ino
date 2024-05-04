@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include <avr/wdt.h>
 #include <EEPROM.h>
 
 #include "tss.h"
@@ -39,6 +40,9 @@ enum states_e {
 };
 
 void setup() {
+  wdt_enable(WDTO_1S);
+  wdt_reset();
+
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
   pinMode(PS_ON, OUTPUT);
@@ -58,6 +62,7 @@ void setup() {
   run_state_machine();  //only runs INIT step
 
   TinySer.write(EOM);
+  wdt_reset();
 }
 
 uint8_t machine_state = INIT;
@@ -129,5 +134,8 @@ void loop() {
     send_state();
   }
   run_state_machine();
+
+  wdt_reset();
   delay(10);  //give the interrupts some time
+  wdt_reset();
 }

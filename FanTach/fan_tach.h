@@ -42,9 +42,8 @@ void setup_fan_tach() {
   fan_mon_enabled = EEPROM.read(0);
 
   noInterrupts();
-  GIMSK |= 1 << PCIE0;  //enable PCINT0
-
   //        PA7......PA0
   PCMSK0 |= 0b00001111;  //enable PCINT0 for pins PA0 to PA3
+  GIMSK |= 1 << PCIE0;  //enable PCINT0
   interrupts();
 }
