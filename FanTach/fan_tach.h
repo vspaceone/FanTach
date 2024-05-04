@@ -2,8 +2,9 @@ uint8_t TICKS_PER_ROTATION = 4;
 
 uint16_t fan_rpm[4] = { 0, 0, 0, 0 };  //rpm/10
 uint8_t fan_ticks[4] = { 0, 0, 0, 0 };
+byte fan_mon_enabled = 0xFF;
 
-#define bitFlip(b, n)  b ^= (1 << n)
+#define bitFlip(b, n) b ^= (1 << n)
 
 /*
   dividing ticks by time since last check is quite the crude alg.
@@ -20,7 +21,8 @@ void calc_fan_speed(uint16_t delta_ms) {
 
 bool fans_below() {
   for (uint8_t i = 0; i < 4; i++)
-    if (fan_rpm[i] < ERROR_RPM) return true;
+    if (bitRead(fan_mon_enabled, i))
+      if (fan_rpm[i] < ERROR_RPM) return true;
   return false;
 }
 
@@ -37,8 +39,12 @@ ISR(PCINT0_vect) {
 }
 
 void setup_fan_tach() {
+  fan_mon_enabled = EEPROM.read(0);
+
+  noInterrupts();
   GIMSK |= 1 << PCIE0;  //enable PCINT0
 
   //        PA7......PA0
   PCMSK0 |= 0b00001111;  //enable PCINT0 for pins PA0 to PA3
+  interrupts();
 }

@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include <EEPROM.h>
 
 #include "uart/SoftwareSerial.h"
 
