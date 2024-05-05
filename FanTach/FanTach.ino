@@ -112,12 +112,13 @@ uint32_t problem_begin_ms = 0;
 void run_state_machine() {
   switch (machine_state) {
     case INIT:
-      if (millis() > INIT_TIMEOUT * 1000) {
-        machine_state = OK;
+      {
+        if (millis() > INIT_TIMEOUT * 1000) {
+          machine_state = OK;
+          if (!digitalRead(BUTTON)) detect_fans();
+        }
 
-        if (!digitalRead(BUTTON)) detect_fans();
-
-        digitalWrite(LED, (millis() >> 11) & 1);  //blink 2048ms
+        digitalWrite(LED, HIGH);  //steady
         digitalWrite(PS_ON, LOW);
       }
       break;
@@ -128,7 +129,7 @@ void run_state_machine() {
           machine_state = PROBLEM;
         }
 
-        digitalWrite(LED, HIGH); //off
+        digitalWrite(LED, HIGH);  //off
         digitalWrite(PS_ON, LOW);
       }
       break;
