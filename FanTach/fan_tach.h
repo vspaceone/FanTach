@@ -22,10 +22,10 @@ void calc_fan_speed(uint16_t delta_ms) {
   }
 }
 
-bool fans_below() {
+bool fans_below(uint16_t rpm) {
   for (uint8_t i = 0; i < 4; i++)
     if (bitRead(fan_mon_enabled, i))
-      if (fan_rpm[i] < ERROR_RPM) return true;
+      if (fan_rpm[i] < rpm) return true;
   return false;
 }
 

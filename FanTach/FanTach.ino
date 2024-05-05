@@ -124,7 +124,7 @@ void run_state_machine() {
       break;
     case OK:
       {
-        if (fans_below()) {
+        if (fans_below(ERROR_RPM)) {
           problem_begin_ms = millis();
           machine_state = PROBLEM;
         }
@@ -135,7 +135,7 @@ void run_state_machine() {
       break;
     case PROBLEM:
       {
-        if (!fans_below()) machine_state = OK;
+        if (!fans_below(OK_RPM)) machine_state = OK;
         if (millis() - problem_begin_ms > (uint32_t)PROBLEM_WAIT_TIME * 1000) machine_state = ERROR;
 
         digitalWrite(LED, (millis() >> 10) & 1);  //blink 1024ms
@@ -144,7 +144,7 @@ void run_state_machine() {
       break;
     case ERROR:
       {
-        //if (!fans_below()) machine_state = OK;  //can't happen if fans runn off of same PSU
+        //if (!fans_below()) machine_state = OK;  //can't happen if fans run off of same PSU
         if (!digitalRead(BUTTON)) machine_state = OK;
 
         digitalWrite(LED, (millis() >> 9) & 1);  //blink 512ms
