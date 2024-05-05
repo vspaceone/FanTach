@@ -20,7 +20,7 @@ const uint8_t FAN_PWM_PINS[4] = { PA5, PA6, PA7, 8 + PB2 };
 #endif
 const uint8_t LED = 8 + PB3;
 const uint8_t PS_ON = PA4;
-const uint8_t DET_FANS = 8 + PB1;
+const uint8_t BUTTON = 8 + PB1;
 //PB0 is UART TX
 
 enum byte_meanings_e {
@@ -58,7 +58,7 @@ void setup() {
   digitalWrite(LED, LOW);
   pinMode(PS_ON, OUTPUT);
   digitalWrite(PS_ON, HIGH);
-  pinMode(DET_FANS, INPUT_PULLUP);
+  pinMode(BUTTON, INPUT_PULLUP);
 
   softSerialBegin();
   softSerialWrite(BOOT);
@@ -115,7 +115,7 @@ void run_state_machine() {
       if (millis() > INIT_TIMEOUT * 1000) {
         machine_state = OK;
 
-        if (!digitalRead(DET_FANS)) detect_fans();
+        if (!digitalRead(BUTTON)) detect_fans();
       }
       break;
     case OK:
@@ -140,7 +140,8 @@ void run_state_machine() {
       break;
     case ERROR:
       {
-        if (!fans_below()) machine_state = OK;
+        if (!fans_below()) machine_state = OK;  //can't happen if fans runn off of same PSU
+        if (!digitalRead(BUTTON)) machine_state = OK;
 
         digitalWrite(LED, LOW);
         digitalWrite(LED, (millis() >> 10) & 1);  //blink 512ms
